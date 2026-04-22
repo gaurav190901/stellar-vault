@@ -1,0 +1,51 @@
+name: Deploy to Testnet
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Stellar CLI
+        run: cargo install --locked stellar-cli --features opt
+
+      - name: Configure Stellar account
+        env:
+          STELLAR_SECRET_KEY: ${{ secrets.STELLAR_SECRET_KEY }}
+        run: |
+          stellar keys add deployer --secret-key "$STELLAR_SECRET_KEY"
+
+      - name: Deploy contracts
+        env:
+          SOURCE: deployer
+          NETWORK: testnet
+        run: bash scripts/deploy.sh
+
+      - name: Initialize contracts
+        env:
+          SOURCE: deployer
+          NETWORK: testnet
+        run: bash scripts/initialize.sh
+
+      - name: Upload .env.local as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-addresses
+          path: frontend/.env.local

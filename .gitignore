@@ -1,0 +1,24 @@
+# Rust
+target/
+Cargo.lock
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.iml
