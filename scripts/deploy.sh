@@ -3,38 +3,30 @@ set -e
 
 NETWORK="${NETWORK:-testnet}"
 SOURCE="${SOURCE:-deployer}"
-
-echo "🚀 Building contracts..."
-cargo build --target wasm32-unknown-unknown --release --manifest-path "$(dirname "$0")/../Cargo.toml"
-
 WASM_DIR="$(dirname "$0")/../target/wasm32-unknown-unknown/release"
 
+echo "=== StellarVault Deploy Script ==="
+echo "Network: $NETWORK | Source: $SOURCE"
 echo ""
-echo "📦 Deploying VaultToken..."
+
+echo "Deploying VaultToken..."
 VAULT_TOKEN_ID=$(stellar contract deploy \
   --wasm "$WASM_DIR/vault_token.wasm" \
-  --source "$SOURCE" \
-  --network "$NETWORK")
+  --source "$SOURCE" --network "$NETWORK")
 echo "VaultToken: $VAULT_TOKEN_ID"
 
-echo ""
-echo "📦 Deploying RevenueRouter..."
+echo "Deploying RevenueRouter..."
 REVENUE_ROUTER_ID=$(stellar contract deploy \
   --wasm "$WASM_DIR/revenue_router.wasm" \
-  --source "$SOURCE" \
-  --network "$NETWORK")
+  --source "$SOURCE" --network "$NETWORK")
 echo "RevenueRouter: $REVENUE_ROUTER_ID"
 
-echo ""
-echo "📦 Deploying SubscriptionManager..."
+echo "Deploying SubscriptionManager..."
 SUB_MANAGER_ID=$(stellar contract deploy \
   --wasm "$WASM_DIR/subscription_manager.wasm" \
-  --source "$SOURCE" \
-  --network "$NETWORK")
+  --source "$SOURCE" --network "$NETWORK")
 echo "SubscriptionManager: $SUB_MANAGER_ID"
 
-echo ""
-echo "📝 Writing contract IDs to frontend/.env.local..."
 FRONTEND_ENV="$(dirname "$0")/../frontend/.env.local"
 cat > "$FRONTEND_ENV" <<EOF
 NEXT_PUBLIC_NETWORK=$NETWORK
@@ -46,9 +38,10 @@ NEXT_PUBLIC_SUBSCRIPTION_MANAGER_CONTRACT_ID=$SUB_MANAGER_ID
 EOF
 
 echo ""
-echo "✅ All contracts deployed!"
-echo "   VaultToken:           $VAULT_TOKEN_ID"
-echo "   RevenueRouter:        $REVENUE_ROUTER_ID"
-echo "   SubscriptionManager:  $SUB_MANAGER_ID"
+echo "All contracts deployed!"
+echo "  VaultToken:           $VAULT_TOKEN_ID"
+echo "  RevenueRouter:        $REVENUE_ROUTER_ID"
+echo "  SubscriptionManager:  $SUB_MANAGER_ID"
 echo ""
-echo "Run: bash scripts/initialize.sh to initialize contracts"
+echo "Contract IDs written to frontend/.env.local"
+echo "Run: bash scripts/initialize.sh to initialize"
