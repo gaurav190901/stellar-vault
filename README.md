@@ -240,21 +240,24 @@ test result: ok. 16 passed; 0 failed; 0 ignored
 | Network | Stellar Testnet |
 
 ---
+Screenshots-
 
-## 🎯 Green Belt Level 4 — Requirements Checklist
+<img width="1260" height="870" alt="Screenshot 2026-04-23 at 10 10 33 PM" src="https://github.com/user-attachments/assets/a781d35a-50ad-40bc-b2e6-393746c092e9" />
 
-- [x] 3 production Soroban smart contracts deployed on testnet
-- [x] Inter-contract calls (SubscriptionManager → VaultToken.mint)
-- [x] SEP-41 compliant fungible token (VaultToken / VAULT)
-- [x] TTL-aware persistent storage with `extend_ttl`
-- [x] 16 unit tests, 0 failures (`cargo test --workspace`)
-- [x] Deployment scripts (`deploy.sh` + `initialize.sh`)
-- [x] Next.js 14+ App Router frontend
-- [x] Freighter wallet integration (connect, sign, submit)
-- [x] Fully responsive UI (375px mobile → desktop)
-- [x] GitHub Actions CI/CD (test + deploy + lighthouse)
-- [x] Live production deployment: [stellar-vault-app.netlify.app](https://stellar-vault-app.netlify.app)
-- [x] Comprehensive README with architecture, setup, and contract addresses
+
+<img width="1440" height="851" alt="Screenshot 2026-04-23 at 10 10 59 PM" src="https://github.com/user-attachments/assets/02c39694-31b8-4f7a-8691-8eea0ea766d7" />
+
+
+<img width="1443" height="859" alt="Screenshot 2026-04-23 at 10 11 21 PM" src="https://github.com/user-attachments/assets/849b5d9c-aa9f-4d31-aba3-75c870c3855f" />
+
+
+mobile view 
+
+<img width="353" height="770" alt="Screenshot 2026-04-23 at 10 12 24 PM" src="https://github.com/user-attachments/assets/5ff834c5-b0e1-411b-a0c4-18cce756173f" />
+
+
+<img width="349" height="682" alt="Screenshot 2026-04-23 at 10 12 10 PM" src="https://github.com/user-attachments/assets/b8a6c097-2804-4051-a25c-f0c5f28798b1" />
+
 
 ---
 
