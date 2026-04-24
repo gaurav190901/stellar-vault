@@ -70,26 +70,35 @@ export default function DashboardPage() {
       </div>
 
       <div className="card p-5">
-        <h2 className="text-sm font-semibold mb-4">Recent Subscriptions</h2>
+        <h2 className="text-sm font-semibold mb-4">Subscription Tiers Overview</h2>
         {tiers.length === 0 ? (
-          <p className="text-sm text-center py-4" style={{color: "var(--muted)"}}>No subscriptions yet</p>
+          <p className="text-sm text-center py-4" style={{color: "var(--muted)"}}>
+            {loading ? "Loading..." : "No tiers created yet. Click '+ Create Tier' to get started."}
+          </p>
         ) : (
           <div className="flex flex-col gap-3">
-            {[1,2,3].map((i) => (
-              <div key={i} className="flex items-center justify-between py-2"
+            {tiers.map((tier) => (
+              <div key={tier.id} className="flex items-center justify-between py-2"
                 style={{borderBottom: "1px solid var(--border)"}}>
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-                    style={{background: "rgba(91,184,212,0.1)", color: "var(--accent)"}}>◎</div>
+                    style={{background: "rgba(91,184,212,0.1)", color: "var(--accent)"}}>◈</div>
                   <div>
-                    <p className="text-sm font-mono">G...{(i*1234).toString().padStart(4,"0")}</p>
-                    <p className="text-xs" style={{color: "var(--muted)"}}>Tier #{i-1}</p>
+                    <p className="text-sm font-medium">{tier.name}</p>
+                    <p className="text-xs" style={{color: "var(--muted)"}}>Tier #{tier.id}</p>
                   </div>
                 </div>
-                <span className="text-xs px-2 py-1 rounded-full"
-                  style={{background: "rgba(91,184,212,0.1)", color: "var(--accent)", border: "1px solid rgba(91,184,212,0.2)"}}>
-                  Active
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-mono font-semibold" style={{color: "var(--accent)"}}>
+                    {(Number(tier.price) / 10_000_000).toFixed(2)} XLM
+                  </span>
+                  <span className="text-xs px-2 py-1 rounded-full"
+                    style={tier.active
+                      ? {background: "rgba(91,184,212,0.1)", color: "var(--accent)", border: "1px solid rgba(91,184,212,0.2)"}
+                      : {background: "rgba(248,113,113,0.1)", color: "#f87171", border: "1px solid rgba(248,113,113,0.2)"}}>
+                    {tier.active ? "Active" : "Paused"}
+                  </span>
+                </div>
               </div>
             ))}
           </div>

@@ -7,21 +7,23 @@ import TransactionStatus from "./TransactionStatus";
 interface TierCardProps {
   tier: TierConfig;
   isSubscribed?: boolean;
+  onSubscribeSuccess?: () => void;
 }
 
-export default function TierCard({ tier, isSubscribed }: TierCardProps) {
+export default function TierCard({ tier, isSubscribed, onSubscribeSuccess }: TierCardProps) {
   const { address, isConnected, signTx } = useWallet();
   const [txStatus, setTxStatus] = useState<"idle" | "pending" | "success" | "error">("idle");
   const [txHash, setTxHash] = useState("");
   const [txMsg, setTxMsg] = useState("");
 
   const handleSubscribe = async () => {
-    if (!address) return;
-    setTxStatus("pending"); setTxMsg("");
+    if (!address || txStatus === "pending") return;
+    setTxStatus("pending"); setTxMsg(""); setTxHash("");
     try {
       const result = await subscribe(address, tier.id, signTx);
       setTxHash(result.hash);
       setTxStatus("success");
+      onSubscribeSuccess?.();
     } catch (e: unknown) {
       setTxStatus("error");
       setTxMsg(e instanceof Error ? e.message : "Transaction failed");

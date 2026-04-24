@@ -42,11 +42,11 @@ export function useDashboard(address: string | null) {
         getXlmBalance(address),
       ]);
 
-      const tierList: TierConfig[] = [];
-      for (let i = 0; i < count; i++) {
-        const tier = await getTier(address, i);
-        if (tier) tierList.push(tier);
-      }
+      // Fetch all tiers in parallel instead of sequentially
+      const tierResults = await Promise.all(
+        Array.from({ length: count }, (_, i) => getTier(address, i))
+      );
+      const tierList: TierConfig[] = tierResults.filter((t): t is TierConfig => t !== null);
 
       const monthlyRev = tierList
         .filter((t) => t.active)

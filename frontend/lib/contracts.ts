@@ -101,15 +101,26 @@ async function pollTx(hash: string): Promise<{ hash: string; status: string }> {
   return { hash, status: "PENDING" };
 }
 
+// Guard against concurrent sign attempts (prevents double-popup)
+let _signingInProgress = false;
+
 async function signAndSend(
   assembled: Transaction,
   signTx: (xdr: string) => Promise<string>
 ): Promise<{ hash: string; status: string }> {
-  const signedXdr = await signTx(assembled.toXDR());
-  const signed = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
-  const res = await server.sendTransaction(signed);
-  if (res.status === "ERROR") throw new Error(`Send failed: ${JSON.stringify(res.errorResult)}`);
-  return pollTx(res.hash);
+  if (_signingInProgress) {
+    throw new Error("A transaction is already awaiting signature. Please complete it first.");
+  }
+  _signingInProgress = true;
+  try {
+    const signedXdr = await signTx(assembled.toXDR());
+    const signed = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
+    const res = await server.sendTransaction(signed);
+    if (res.status === "ERROR") throw new Error(`Send failed: ${JSON.stringify(res.errorResult)}`);
+    return pollTx(res.hash);
+  } finally {
+    _signingInProgress = false;
+  }
 }
 
 export async function createTier(
@@ -141,6 +152,58 @@ export async function subscribe(
     nativeToScVal(tierId, { type: "u32" }),
   ]);
   return signAndSend(assembled, signTx);
+}
+
+export async function getSubscription(
+  callerAddress: string,
+  subscriberAddress: string,
+  tierId: number
+): Promise<SubscriptionRecord | null> {
+  try {
+    assertContract(CONTRACTS.subscriptionManager, "SubscriptionManager");
+    const sim = await simulateOnly(callerAddress, CONTRACTS.subscriptionManager, "get_subscription", [
+      Address.fromString(subscriberAddress).toScVal(),
+      nativeToScVal(tierId, { type: "u32" }),
+    ]);
+    if (!sim?.result) return null;
+    const n = scValToNative(sim.result.retval) as Record<string, unknown>;
+    return {
+      subscriber: String(n.subscriber),
+      tier_id: Number(n.tier_id),
+      start_ledger: Number(n.start_ledger),
+      expiry_ledger: Number(n.expiry_ledger),
+      active: Boolean(n.active),
+    };
+  } catch { return null; }
+}
+
+export async function renewSubscription(
+  subscriberAddress: string,
+  tierId: number,
+  signTx: (xdr: string) => Promise<string>
+) {
+  assertContract(CONTRACTS.subscriptionManager, "SubscriptionManager");
+  const assembled = await buildAndAssemble(subscriberAddress, CONTRACTS.subscriptionManager, "renew", [
+    Address.fromString(subscriberAddress).toScVal(),
+    nativeToScVal(tierId, { type: "u32" }),
+  ]);
+  return signAndSend(assembled, signTx);
+}
+
+/** Returns estimated expiry as a Date, given a ledger number.
+ *  Stellar Testnet closes ~1 ledger per 5.5 seconds. */
+export function ledgerToEstimatedDate(expiryLedger: number, currentLedger: number): Date {
+  const secondsUntilExpiry = (expiryLedger - currentLedger) * 5.5;
+  return new Date(Date.now() + secondsUntilExpiry * 1000);
+}
+
+export async function getCurrentLedger(): Promise<number> {
+  try {
+    const resp = await fetch("https://horizon-testnet.stellar.org/ledgers?order=desc&limit=1");
+    if (!resp.ok) return 0;
+    const data = await resp.json();
+    return data.records?.[0]?.sequence ?? 0;
+  } catch { return 0; }
 }
 
 export async function getTierCount(callerAddress: string): Promise<number> {
