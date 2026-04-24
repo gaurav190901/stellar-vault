@@ -15,13 +15,27 @@
 
 **[🚀 Live Demo → stellar-vault-app.netlify.app](https://stellar-vault-app.netlify.app)**
 
-*Green Belt Level 4 — Rise In "Stellar Journey to Mastery" Builder Challenge*
+*Green Belt Level 5 — Rise In "Stellar Journey to Mastery" Builder Challenge*
 
 <br />
 
 </div>
 
 ---
+
+## 🐛 User Feedback & Bug Fixes (Level 5)
+
+The following issues were collected from user feedback and resolved in commit [`5694fef`](https://github.com/gaurav190901/stellarvault/commit/5694fef).
+
+| # | Feedback | Type | Fix | Commit |
+|---|---|---|---|---|
+| 1 | Double popup appears when confirming a transaction | Visual / UI glitch | Added a `_signingInProgress` mutex in `signAndSend` to prevent concurrent Freighter sign requests from stacking | [`5694fef`](https://github.com/gaurav190901/stellarvault/commit/5694fef) |
+| 2 | Clicking `/subscribe` with wallet connected still required re-connecting to view subscriptions | Critical bug | Fixed `useDashboard` being called with the read-only fallback address instead of the real wallet address; subscription status checks now use the connected wallet | [`5694fef`](https://github.com/gaurav190901/stellarvault/commit/5694fef) |
+| 3 | No way for subscribers to know their subscription is about to expire | Missing feature | Added expiry date display and ⚠ warning banners (≤3 days) with a one-click **Renew** button in the My Subscriptions section | [`5694fef`](https://github.com/gaurav190901/stellarvault/commit/5694fef) |
+| 4 | Performance degradation — slowness / freezing when loading tiers | Performance | Parallelised all tier fetches with `Promise.all` (was sequential `for` loop); same fix applied to subscription status checks on `/subscribe` | [`5694fef`](https://github.com/gaurav190901/stellarvault/commit/5694fef) |
+| 5 | "Recent Subscriptions" section showed hardcoded fake placeholder data | Visual / UI glitch | Replaced fake rows with real on-chain tier data; section renamed to "Subscription Tiers Overview" | [`5694fef`](https://github.com/gaurav190901/stellarvault/commit/5694fef) |
+
+
 
 ## What is StellarVault?
 
