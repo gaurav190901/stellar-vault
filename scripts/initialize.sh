@@ -41,6 +41,7 @@ stellar contract invoke --id "$SUB_MANAGER_ID" --source "$SOURCE" --network "$NE
   --admin "$ADMIN" \
   --vault_token "$VAULT_TOKEN_ID" \
   --payment_token "$PAYMENT_TOKEN" \
+  --revenue_router "$REVENUE_ROUTER_ID" \
   --reward_rate 100
 
 echo ""

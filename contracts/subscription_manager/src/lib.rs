@@ -9,6 +9,7 @@ pub enum DataKey {
     Admin,
     VaultToken,
     PaymentToken,
+    RevenueRouter,
     Tier(u32),
     Subscription(Address, u32),
     TierCount,
@@ -38,8 +39,18 @@ pub struct SubscriptionRecord {
 mod vault_token_iface {
     use soroban_sdk::{contractclient, Address, Env};
     #[contractclient(name = "VaultTokenClient")]
+    #[allow(dead_code)]
     pub trait VaultToken {
         fn mint(env: Env, to: Address, amount: i128);
+    }
+}
+
+mod revenue_router_iface {
+    use soroban_sdk::{contractclient, Address, Env};
+    #[contractclient(name = "RevenueRouterClient")]
+    #[allow(dead_code)]
+    pub trait RevenueRouter {
+        fn route(env: Env, token_address: Address, amount: i128);
     }
 }
 
@@ -53,6 +64,7 @@ impl SubscriptionManager {
         admin: Address,
         vault_token: Address,
         payment_token: Address,
+        revenue_router: Address,
         reward_rate: i128,
     ) {
         if env.storage().instance().has(&DataKey::Admin) {
@@ -62,6 +74,7 @@ impl SubscriptionManager {
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::VaultToken, &vault_token);
         env.storage().instance().set(&DataKey::PaymentToken, &payment_token);
+        env.storage().instance().set(&DataKey::RevenueRouter, &revenue_router);
         env.storage().instance().set(&DataKey::RewardRate, &reward_rate);
         env.storage().instance().set(&DataKey::TierCount, &0u32);
         env.storage().instance().set(&DataKey::TotalSubscribers, &0u32);
@@ -97,10 +110,12 @@ impl SubscriptionManager {
         let payment_token: Address = env.storage().instance().get(&DataKey::PaymentToken).unwrap();
         let vault_token_addr: Address = env.storage().instance().get(&DataKey::VaultToken).unwrap();
         let reward_rate: i128 = env.storage().instance().get(&DataKey::RewardRate).unwrap_or(1);
-        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
+        let revenue_router: Address = env.storage().instance().get(&DataKey::RevenueRouter).unwrap();
 
-        // Direct transfer: subscriber pays admin directly. No router, no intermediate balance.
-        token::Client::new(&env, &payment_token).transfer(&subscriber, &admin, &tier.price);
+        // Route payment: transfer to router and trigger splits on-chain
+        token::Client::new(&env, &payment_token).transfer(&subscriber, &revenue_router, &tier.price);
+        revenue_router_iface::RevenueRouterClient::new(&env, &revenue_router)
+            .route(&payment_token, &tier.price);
 
         // Mint VAULT reward tokens to subscriber
         let reward_amount = tier.price * reward_rate / 10_000_000i128;
@@ -133,8 +148,13 @@ impl SubscriptionManager {
             .expect("tier not found");
         if !tier.active { panic!("tier is not active"); }
         let payment_token: Address = env.storage().instance().get(&DataKey::PaymentToken).unwrap();
-        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
-        token::Client::new(&env, &payment_token).transfer(&subscriber, &admin, &tier.price);
+        let revenue_router: Address = env.storage().instance().get(&DataKey::RevenueRouter).unwrap();
+
+        // Route payment: transfer to router and trigger splits on-chain
+        token::Client::new(&env, &payment_token).transfer(&subscriber, &revenue_router, &tier.price);
+        revenue_router_iface::RevenueRouterClient::new(&env, &revenue_router)
+            .route(&payment_token, &tier.price);
+
         let key = DataKey::Subscription(subscriber.clone(), tier_id);
         let mut record: SubscriptionRecord = env
             .storage().persistent().get(&key)
@@ -146,6 +166,16 @@ impl SubscriptionManager {
         env.storage().persistent().set(&key, &record);
         env.storage().persistent().extend_ttl(&key, tier.duration_ledgers, tier.duration_ledgers * 2);
         env.events().publish((symbol_short!("renewed"), subscriber.clone()), (tier_id, record.expiry_ledger));
+    }
+
+    pub fn update_reward_rate(env: Env, reward_rate: i128) {
+        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
+        admin.require_auth();
+        env.storage().instance().set(&DataKey::RewardRate, &reward_rate);
+    }
+
+    pub fn get_reward_rate(env: Env) -> i128 {
+        env.storage().instance().get(&DataKey::RewardRate).unwrap_or(0)
     }
 
     pub fn cancel(env: Env, subscriber: Address, tier_id: u32) {
@@ -202,18 +232,34 @@ mod tests {
         pub fn mint(_env: Env, _to: Address, _amount: i128) {}
     }
 
+    #[soroban_sdk::contract]
+    pub struct MockRouter;
+    #[soroban_sdk::contractimpl]
+    impl MockRouter {
+        pub fn route(_env: Env, _token_address: Address, _amount: i128) {}
+    }
+
     fn setup() -> (Env, Address, Address, SubscriptionManagerClient<'static>) {
         let env = Env::default();
         env.mock_all_auths();
         let admin = Address::generate(&env);
         let subscriber = Address::generate(&env);
         let vault_id = env.register_contract(None, MockVault);
+        let router_id = env.register_contract(None, MockRouter);
         let payment_addr = env.register_stellar_asset_contract_v2(admin.clone()).address();
         StellarAssetClient::new(&env, &payment_addr).mint(&subscriber, &1_000_000_000i128);
         let sm_id = env.register_contract(None, SubscriptionManager);
         let client = SubscriptionManagerClient::new(&env, &sm_id);
-        client.initialize(&admin, &vault_id, &payment_addr, &100i128);
+        client.initialize(&admin, &vault_id, &payment_addr, &router_id, &100i128);
         (env, admin, subscriber, client)
+    }
+
+    #[test]
+    fn test_update_reward_rate() {
+        let (_env, _admin, _, client) = setup();
+        assert_eq!(client.get_reward_rate(), 100i128);
+        client.update_reward_rate(&200i128);
+        assert_eq!(client.get_reward_rate(), 200i128);
     }
 
     #[test]
