@@ -363,3 +363,16 @@ export async function updateTier(
   ]);
   return signAndSend(assembled, signTx);
 }
+
+export async function cancelSubscription(
+  subscriberAddress: string,
+  tierId: number,
+  signTx: (xdr: string) => Promise<string>
+) {
+  assertContract(CONTRACTS.subscriptionManager, "SubscriptionManager");
+  const assembled = await buildAndAssemble(subscriberAddress, CONTRACTS.subscriptionManager, "cancel", [
+    Address.fromString(subscriberAddress).toScVal(),
+    nativeToScVal(tierId, { type: "u32" }),
+  ]);
+  return signAndSend(assembled, signTx);
+}
