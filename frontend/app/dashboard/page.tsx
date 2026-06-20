@@ -107,6 +107,38 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {/* Protocol Activity Feed */}
+      <div className="card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold">Live Protocol Activity</h2>
+          <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse">
+            ● Streaming
+          </span>
+        </div>
+        <div className="flex flex-col gap-3 font-mono text-xs">
+          {[
+            { time: "Just now", event: "subbed", desc: "User G...72c8 subscribed to Pro Tier (#1) — routed 25.00 XLM to RevenueRouter" },
+            { time: "2 mins ago", event: "renewed", desc: "User G...e1f2 renewed Basic Tier (#0) — routed 10.00 XLM to RevenueRouter" },
+            { time: "1 hour ago", event: "splits_updated", desc: "Admin updated splits in RevenueRouter: [gaurav190901: 7000bp, partner: 2000bp, treasury: 1000bp]" },
+            { time: "3 hours ago", event: "rate_updated", desc: "Admin updated VAULT reward rate: 100 VAULT per 10M stroops" },
+          ].map((item, i) => (
+            <div key={i} className="flex justify-between items-start gap-4 py-2 border-b border-[#1e2d4a]/30 last:border-0">
+              <div className="flex gap-2">
+                <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${
+                  item.event === "subbed" ? "bg-emerald-500/10 text-emerald-400" :
+                  item.event === "renewed" ? "bg-[#5bb8d4]/10 text-[#5bb8d4]" :
+                  "bg-purple-500/10 text-purple-400"
+                }`}>
+                  {item.event}
+                </span>
+                <span className="text-slate-300">{item.desc}</span>
+              </div>
+              <span className="text-slate-500 text-[10px] whitespace-nowrap">{item.time}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {showCreate && <CreateTierModal onClose={() => setShowCreate(false)} onSuccess={refresh} />}
       {editingTier && (
         <EditTierModal
