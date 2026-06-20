@@ -6,6 +6,7 @@ import {
   getTotalSubscribers,
   getVaultBalance,
   getXlmBalance,
+  getSplits,
   TierConfig,
   stroopsToXlm,
 } from "@/lib/contracts";
@@ -27,6 +28,7 @@ export function useDashboard(address: string | null) {
     monthlyRevenue: "0",
   });
   const [tiers, setTiers] = useState<TierConfig[]>([]);
+  const [splits, setSplits] = useState<{ address: string; basisPoints: number }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,11 +37,12 @@ export function useDashboard(address: string | null) {
     setLoading(true);
     setError(null);
     try {
-      const [count, totalSubs, vaultBal, xlmBal] = await Promise.all([
+      const [count, totalSubs, vaultBal, xlmBal, fetchedSplits] = await Promise.all([
         getTierCount(address),
         getTotalSubscribers(address),
         getVaultBalance(address),
         getXlmBalance(address),
+        getSplits(address),
       ]);
 
       // Fetch all tiers in parallel instead of sequentially
@@ -54,6 +57,7 @@ export function useDashboard(address: string | null) {
         .toFixed(2);
 
       setTiers(tierList);
+      setSplits(fetchedSplits);
       setStats({
         totalSubscribers: totalSubs,
         tierCount: count,
@@ -72,5 +76,5 @@ export function useDashboard(address: string | null) {
     refresh();
   }, [refresh]);
 
-  return { stats, tiers, loading, error, refresh };
+  return { stats, tiers, splits, loading, error, refresh };
 }

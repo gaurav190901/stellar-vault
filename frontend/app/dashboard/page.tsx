@@ -12,7 +12,7 @@ import { TierConfig, CONTRACTS } from "@/lib/contracts";
 
 export default function DashboardPage() {
   const { address, isConnected } = useWallet();
-  const { stats, tiers, loading, error, refresh } = useDashboard(address);
+  const { stats, tiers, splits, loading, error, refresh } = useDashboard(address);
   const [showCreate, setShowCreate] = useState(false);
   const [editingTier, setEditingTier] = useState<TierConfig | null>(null);
 
@@ -68,7 +68,7 @@ export default function DashboardPage() {
           </div>
           <SubscriptionTable tiers={tiers} onEdit={(t: TierConfig) => setEditingTier(t)} />
         </div>
-        <RevenueChart />
+        <RevenueChart splits={splits.length > 0 ? splits : undefined} />
       </div>
 
       <div className="card p-5">
