@@ -6,6 +6,7 @@ import StatCard from "@/components/StatCard";
 import SubscriptionTable from "@/components/SubscriptionTable";
 import RevenueChart from "@/components/RevenueChart";
 import CreateTierModal from "@/components/CreateTierModal";
+import EditTierModal from "@/components/EditTierModal";
 import WalletConnect from "@/components/WalletConnect";
 import { TierConfig, CONTRACTS } from "@/lib/contracts";
 
@@ -13,6 +14,7 @@ export default function DashboardPage() {
   const { address, isConnected } = useWallet();
   const { stats, tiers, loading, error, refresh } = useDashboard(address);
   const [showCreate, setShowCreate] = useState(false);
+  const [editingTier, setEditingTier] = useState<TierConfig | null>(null);
 
   if (!isConnected) {
     return (
@@ -64,7 +66,7 @@ export default function DashboardPage() {
             <h2 className="text-sm font-semibold">Subscription Tiers</h2>
             <button onClick={refresh} className="text-xs transition-colors" style={{color: "var(--muted)"}}>↻ Refresh</button>
           </div>
-          <SubscriptionTable tiers={tiers} onEdit={(t: TierConfig) => console.log("edit", t)} />
+          <SubscriptionTable tiers={tiers} onEdit={(t: TierConfig) => setEditingTier(t)} />
         </div>
         <RevenueChart />
       </div>
@@ -106,6 +108,13 @@ export default function DashboardPage() {
       </div>
 
       {showCreate && <CreateTierModal onClose={() => setShowCreate(false)} onSuccess={refresh} />}
+      {editingTier && (
+        <EditTierModal
+          tier={editingTier}
+          onClose={() => setEditingTier(null)}
+          onSuccess={refresh}
+        />
+      )}
     </div>
   );
 }
