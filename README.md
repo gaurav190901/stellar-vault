@@ -47,7 +47,7 @@ Every subscription is a smart contract interaction. Every payment is a blockchai
 User (Freighter Wallet)
         │
         ▼
-SubscriptionManager ──► token.transfer(subscriber → admin, price)
+SubscriptionManager ──► RevenueRouter ──► Split Recipients (70/20/10)
         │
         └──────────────► VaultToken.mint(subscriber, reward_amount)
                                     ↑
@@ -84,9 +84,12 @@ The main orchestrator. Handles tier creation, subscribe/renew/cancel flows, and 
 ```rust
 pub fn subscribe(env: Env, subscriber: Address, tier_id: u32) {
     subscriber.require_auth();
-    // Direct transfer: subscriber pays admin (no intermediate balance needed)
+    // Route payment: transfer directly to RevenueRouter contract
     token::Client::new(&env, &payment_token)
-        .transfer(&subscriber, &admin, &tier.price);
+        .transfer(&subscriber, &revenue_router, &tier.price);
+    // Trigger on-chain basis points splitting and distribution
+    RevenueRouterClient::new(&env, &revenue_router)
+        .route(&payment_token, &tier.price);
     // Mint VAULT reward tokens to subscriber
     VaultTokenClient::new(&env, &vault_token)
         .mint(&subscriber, &reward_amount);
