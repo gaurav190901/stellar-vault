@@ -288,3 +288,78 @@ export function stroopsToXlm(stroops: bigint): string {
 export function ledgersToDays(ledgers: number): number {
   return Math.round(ledgers / 17280);
 }
+
+export async function getSplits(callerAddress: string): Promise<{ address: string; basisPoints: number }[]> {
+  try {
+    assertContract(CONTRACTS.revenueRouter, "RevenueRouter");
+    const sim = await simulateOnly(callerAddress, CONTRACTS.revenueRouter, "get_splits", []);
+    if (!sim?.result) return [];
+    const n = scValToNative(sim.result.retval) as [string, number][];
+    return n.map(([address, basisPoints]) => ({ address, basisPoints }));
+  } catch {
+    return [];
+  }
+}
+
+export async function updateSplits(
+  callerAddress: string,
+  splits: { address: string; basisPoints: number }[],
+  signTx: (xdr: string) => Promise<string>
+) {
+  assertContract(CONTRACTS.revenueRouter, "RevenueRouter");
+  const items = splits.map((s) => {
+    return xdr.ScVal.scvVec([
+      Address.fromString(s.address).toScVal(),
+      nativeToScVal(s.basisPoints, { type: "u32" }),
+    ]);
+  });
+  const scValSplits = xdr.ScVal.scvVec(items);
+
+  const assembled = await buildAndAssemble(callerAddress, CONTRACTS.revenueRouter, "update_splits", [
+    scValSplits,
+  ]);
+  return signAndSend(assembled, signTx);
+}
+
+export async function getRewardRate(callerAddress: string): Promise<number> {
+  try {
+    assertContract(CONTRACTS.subscriptionManager, "SubscriptionManager");
+    const sim = await simulateOnly(callerAddress, CONTRACTS.subscriptionManager, "get_reward_rate", []);
+    if (sim?.result) return Number(scValToNative(sim.result.retval));
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
+export async function updateRewardRate(
+  callerAddress: string,
+  rewardRate: number,
+  signTx: (xdr: string) => Promise<string>
+) {
+  assertContract(CONTRACTS.subscriptionManager, "SubscriptionManager");
+  const assembled = await buildAndAssemble(callerAddress, CONTRACTS.subscriptionManager, "update_reward_rate", [
+    nativeToScVal(BigInt(rewardRate), { type: "i128" }),
+  ]);
+  return signAndSend(assembled, signTx);
+}
+
+export async function updateTier(
+  callerAddress: string,
+  tierId: number,
+  priceXlm: number,
+  durationDays: number,
+  active: boolean,
+  signTx: (xdr: string) => Promise<string>
+) {
+  assertContract(CONTRACTS.subscriptionManager, "SubscriptionManager");
+  const priceStroops = BigInt(Math.round(priceXlm * 10_000_000));
+  const durationLedgers = durationDays * 17280;
+  const assembled = await buildAndAssemble(callerAddress, CONTRACTS.subscriptionManager, "update_tier", [
+    nativeToScVal(tierId, { type: "u32" }),
+    nativeToScVal(priceStroops, { type: "i128" }),
+    nativeToScVal(durationLedgers, { type: "u32" }),
+    nativeToScVal(active, { type: "bool" }),
+  ]);
+  return signAndSend(assembled, signTx);
+}
