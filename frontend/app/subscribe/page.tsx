@@ -9,6 +9,7 @@ import {
   getCurrentLedger,
   ledgerToEstimatedDate,
   renewSubscription,
+  cancelSubscription,
   SubscriptionRecord,
 } from "@/lib/contracts";
 import { useEffect, useState, useCallback } from "react";
@@ -26,6 +27,7 @@ export default function SubscribePage() {
   const [subRecords, setSubRecords] = useState<Record<number, SubscriptionRecord>>({});
   const [currentLedger, setCurrentLedger] = useState(0);
   const [renewStatus, setRenewStatus] = useState<Record<number, "idle" | "pending" | "success" | "error">>({});
+  const [cancelStatus, setCancelStatus] = useState<Record<number, "idle" | "pending" | "success" | "error">>({});
 
   const checkSubs = useCallback(async () => {
     if (!address || tiers.length === 0) return;
@@ -67,6 +69,18 @@ export default function SubscribePage() {
       await checkSubs();
     } catch {
       setRenewStatus((s) => ({ ...s, [tierId]: "error" }));
+    }
+  };
+
+  const handleCancel = async (tierId: number) => {
+    if (!address) return;
+    setCancelStatus((s) => ({ ...s, [tierId]: "pending" }));
+    try {
+      await cancelSubscription(address, tierId, signTx);
+      setCancelStatus((s) => ({ ...s, [tierId]: "success" }));
+      await checkSubs();
+    } catch {
+      setCancelStatus((s) => ({ ...s, [tierId]: "error" }));
     }
   };
 
@@ -192,6 +206,20 @@ export default function SubscribePage() {
                             }}
                           >
                             {status === "pending" ? "Renewing..." : status === "success" ? "✓ Renewed" : "Renew"}
+                          </button>
+                        )}
+                        {!isExpired && (
+                          <button
+                            onClick={() => handleCancel(Number(tierId))}
+                            disabled={cancelStatus[Number(tierId)] === "pending"}
+                            className="text-xs px-3 py-1.5 rounded-lg font-medium transition-opacity disabled:opacity-50"
+                            style={{
+                              background: "rgba(239,68,68,0.1)",
+                              color: "#ef4444",
+                              border: "1px solid rgba(239,68,68,0.2)",
+                            }}
+                          >
+                            {cancelStatus[Number(tierId)] === "pending" ? "Cancelling..." : "Cancel"}
                           </button>
                         )}
                         <span
