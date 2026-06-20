@@ -1,12 +1,14 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import WalletConnect from "@/components/WalletConnect";
+import TransactionStatus from "@/components/TransactionStatus";
+import { getSplits, updateSplits, getRewardRate, updateRewardRate } from "@/lib/contracts";
 
 const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS || "";
 
 export default function AdminPage() {
-  const { address, isConnected } = useWallet();
+  const { address, isConnected, signTx } = useWallet();
   const [splits, setSplits] = useState([
     { address: "", basisPoints: 7000 },
     { address: "", basisPoints: 2000 },
@@ -14,17 +16,77 @@ export default function AdminPage() {
   ]);
   const [rewardRate, setRewardRate] = useState("100");
   const [saved, setSaved] = useState(false);
+  const [rateSaved, setRateSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [txStatus, setTxStatus] = useState<"idle" | "pending" | "success" | "error">("idle");
+  const [txError, setTxError] = useState("");
 
   const isAdmin = isConnected && (!ADMIN_ADDRESS || address === ADMIN_ADDRESS);
+
+  useEffect(() => {
+    async function loadData() {
+      if (!address) return;
+      setLoading(true);
+      try {
+        const [fetchedSplits, fetchedRate] = await Promise.all([
+          getSplits(address),
+          getRewardRate(address),
+        ]);
+        if (fetchedSplits && fetchedSplits.length > 0) {
+          setSplits(fetchedSplits);
+        }
+        if (fetchedRate > 0) {
+          setRewardRate(fetchedRate.toString());
+        }
+      } catch (err) {
+        console.error("Failed to load on-chain splits/rates", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (isAdmin) {
+      loadData();
+    }
+  }, [address, isAdmin]);
 
   const totalBp = splits.reduce((a, s) => a + s.basisPoints, 0);
 
   const handleSaveSplits = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (totalBp !== 10000) return;
-    // In production: call update_splits on RevenueRouter contract
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (totalBp !== 10000 || !address) return;
+    setTxStatus("pending");
+    setTxError("");
+    try {
+      await updateSplits(address, splits, signTx);
+      setTxStatus("success");
+      setSaved(true);
+      setTimeout(() => {
+        setSaved(false);
+        setTxStatus("idle");
+      }, 2000);
+    } catch (err: unknown) {
+      setTxStatus("error");
+      setTxError(err instanceof Error ? err.message : "Failed to save splits");
+    }
+  };
+
+  const handleSaveRewardRate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!address) return;
+    setTxStatus("pending");
+    setTxError("");
+    try {
+      await updateRewardRate(address, parseInt(rewardRate) || 0, signTx);
+      setTxStatus("success");
+      setRateSaved(true);
+      setTimeout(() => {
+        setRateSaved(false);
+        setTxStatus("idle");
+      }, 2000);
+    } catch (err: unknown) {
+      setTxStatus("error");
+      setTxError(err instanceof Error ? err.message : "Failed to save reward rate");
+    }
   };
 
   if (!isConnected) {
@@ -57,9 +119,20 @@ export default function AdminPage() {
         <p className="text-slate-400 text-sm mt-0.5">Manage protocol settings and revenue splits</p>
       </div>
 
+      {txStatus !== "idle" && (
+        <div className="rounded-xl border p-4 text-sm" style={{
+          borderColor: txStatus === "pending" ? "#4f8ef7" : txStatus === "success" ? "#10b981" : "#f87171",
+          background: txStatus === "pending" ? "rgba(79,142,247,0.05)" : txStatus === "success" ? "rgba(16,185,129,0.05)" : "rgba(248,113,113,0.05)",
+        }}>
+          <TransactionStatus status={txStatus} message={txError || undefined} />
+        </div>
+      )}
+
       {/* Revenue Splits */}
       <div className="rounded-2xl bg-[#0d1526] border border-[#1e2d4a] p-6">
-        <h2 className="text-sm font-semibold text-white mb-4">Revenue Splits</h2>
+        <h2 className="text-sm font-semibold text-white mb-4">
+          Revenue Splits {loading && <span className="text-xs text-[#4f8ef7] animate-pulse ml-2 font-normal">(Loading...)</span>}
+        </h2>
         <form onSubmit={handleSaveSplits} className="flex flex-col gap-4">
           {splits.map((split, i) => (
             <div key={i} className="flex gap-3 items-center">
@@ -73,6 +146,7 @@ export default function AdminPage() {
                 }}
                 placeholder="Stellar address (G...)"
                 className="flex-1 bg-[#0a0f1e] border border-[#1e2d4a] rounded-xl px-4 py-2.5 text-white placeholder-slate-600 focus:outline-none focus:border-[#4f8ef7]/50 text-sm font-mono"
+                required
               />
               <input
                 type="number"
@@ -85,6 +159,7 @@ export default function AdminPage() {
                 min="0"
                 max="10000"
                 className="w-24 bg-[#0a0f1e] border border-[#1e2d4a] rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-[#4f8ef7]/50 text-sm text-center"
+                required
               />
               <span className="text-slate-500 text-sm w-8">bp</span>
             </div>
@@ -112,33 +187,42 @@ export default function AdminPage() {
 
           <button
             type="submit"
-            disabled={totalBp !== 10000}
+            disabled={totalBp !== 10000 || txStatus === "pending"}
             className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#7c3aed] to-[#4f8ef7] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
           >
-            {saved ? "✓ Saved" : "Update Splits"}
+            {saved ? "✓ Saved" : txStatus === "pending" ? "Updating..." : "Update Splits"}
           </button>
         </form>
       </div>
 
       {/* Reward Rate */}
       <div className="rounded-2xl bg-[#0d1526] border border-[#1e2d4a] p-6">
-        <h2 className="text-sm font-semibold text-white mb-4">VAULT Reward Rate</h2>
-        <div className="flex gap-3 items-center">
-          <input
-            type="number"
-            value={rewardRate}
-            onChange={(e) => setRewardRate(e.target.value)}
-            min="0"
-            className="flex-1 bg-[#0a0f1e] border border-[#1e2d4a] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#4f8ef7]/50 text-sm"
-          />
-          <span className="text-slate-400 text-sm">VAULT per 10M stroops</span>
-        </div>
-        <p className="text-xs text-slate-500 mt-2">
-          Current rate: {rewardRate} VAULT tokens minted per subscription payment unit.
-        </p>
-        <button className="mt-4 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#7c3aed] to-[#4f8ef7] text-white text-sm font-semibold hover:opacity-90 transition-opacity">
-          Update Rate
-        </button>
+        <h2 className="text-sm font-semibold text-white mb-4">
+          VAULT Reward Rate {loading && <span className="text-xs text-[#4f8ef7] animate-pulse ml-2 font-normal">(Loading...)</span>}
+        </h2>
+        <form onSubmit={handleSaveRewardRate} className="flex flex-col gap-4">
+          <div className="flex gap-3 items-center">
+            <input
+              type="number"
+              value={rewardRate}
+              onChange={(e) => setRewardRate(e.target.value)}
+              min="0"
+              className="flex-1 bg-[#0a0f1e] border border-[#1e2d4a] rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#4f8ef7]/50 text-sm"
+              required
+            />
+            <span className="text-slate-400 text-sm">VAULT per 10M stroops</span>
+          </div>
+          <p className="text-xs text-slate-500">
+            Current rate: {rewardRate} VAULT tokens minted per subscription payment unit.
+          </p>
+          <button
+            type="submit"
+            disabled={txStatus === "pending"}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#7c3aed] to-[#4f8ef7] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {rateSaved ? "✓ Saved" : txStatus === "pending" ? "Updating..." : "Update Rate"}
+          </button>
+        </form>
       </div>
 
       {/* Contract Info */}
