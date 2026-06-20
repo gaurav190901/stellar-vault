@@ -23,25 +23,20 @@
 
 ---
 
-## 🐛 User Feedback & Bug Fixes (Level 5)
+## 🏗 Key Features & Architecture Implementation
 
-The following issues were collected from user feedback and resolved in commit [`5694fef`](https://github.com/gaurav190901/stellarvault/commit/5694fef).
+StellarVault is a production-ready, fully on-chain subscription and payment splits protocol built on Stellar's Soroban smart contract platform. It enables SaaS platforms, DAOs, and content creators to monetize without middlemen, charge transparently, and route revenue splits instantly on-chain.
 
-| # | Feedback | Type | Fix | Commit |
-|---|---|---|---|---|
-| 1 | Double popup appears when confirming a transaction | Visual / UI glitch | Added a `_signingInProgress` mutex in `signAndSend` to prevent concurrent Freighter sign requests from stacking | [`5694fef`](https://github.com/gaurav190901/stellarvault/commit/5694fef) |
-| 2 | Clicking `/subscribe` with wallet connected still required re-connecting to view subscriptions | Critical bug | Fixed `useDashboard` being called with the read-only fallback address instead of the real wallet address; subscription status checks now use the connected wallet | [`5694fef`](https://github.com/gaurav190901/stellarvault/commit/5694fef) |
-| 3 | No way for subscribers to know their subscription is about to expire | Missing feature | Added expiry date display and ⚠ warning banners (≤3 days) with a one-click **Renew** button in the My Subscriptions section | [`5694fef`](https://github.com/gaurav190901/stellarvault/commit/5694fef) |
-| 4 | Performance degradation — slowness / freezing when loading tiers | Performance | Parallelised all tier fetches with `Promise.all` (was sequential `for` loop); same fix applied to subscription status checks on `/subscribe` | [`5694fef`](https://github.com/gaurav190901/stellarvault/commit/5694fef) |
-| 5 | "Recent Subscriptions" section showed hardcoded fake placeholder data | Visual / UI glitch | Replaced fake rows with real on-chain tier data; section renamed to "Subscription Tiers Overview" | [`5694fef`](https://github.com/gaurav190901/stellarvault/commit/5694fef) |
+### 1. ⚙️ Advanced Smart Contract Development
+Built in Rust using the Soroban SDK v21. State is managed via persistent storage with automated TTL extension to ensure subscription record durability. 
+- **Subscription Lifecycle**: Handled via `subscribe()`, `renew()`, and `cancel()` flows in the [SubscriptionManager](file:///Users/neelsubhashpote/garry/stellar-vault/contracts/subscription_manager/src/lib.rs).
+- **Stated Variables**: Holds admin mappings, vault token rewards metadata, and structured pricing tier configurations (`TierConfig`).
 
-
-
-## What is StellarVault?
-
-StellarVault is a production-ready, fully on-chain subscription protocol built on Stellar's Soroban smart contract platform. It lets creators, DAOs, and SaaS products monetize with transparent, trustless subscriptions — no middlemen, no platform cuts, no custody risk.
-
-Every subscription is a smart contract interaction. Every payment is a blockchain transaction. Every revenue split is enforced by code — not by a company's terms of service.
+### 2. 🔗 Inter-Contract Communication
+The protocol divides concerns among 3 independent contracts interacting atomically:
+- **SubscriptionManager** acts as the core orchestrator. When a payment is made, it performs a cross-contract token transfer, routing the funds to the `RevenueRouter` address.
+- **RevenueRouter** immediately runs split logic, dividing the fee among configured recipients.
+- **VaultToken** is an SEP-41 compliant token. The manager performs a cross-contract `mint()` call to distribute loyalty reward tokens directly to the subscriber.
 
 ```
 User (Freighter Wallet)
@@ -55,54 +50,41 @@ SubscriptionManager ──► RevenueRouter ──► Split Recipients (70/20/10
                               on every payment
 ```
 
+### 3. 📡 Event Streaming & Live Protocol Logs
+Every ledger state change publishes standard Soroban events, allowing web application indexers and frontends to stream transactions in real-time.
+- `subbed(subscriber, tier_id, expiry_ledger)`: Emitted on new subscription.
+- `renewed(subscriber, tier_id, new_expiry)`: Emitted when renewing.
+- `cancelled(subscriber, tier_id)`: Emitted on cancellation.
+- `routed(token_address, splits)`: Emitted by the router on revenue split execution.
+
+The dashboard integrates a **Live Protocol Activity Feed** that displays these real-time events for creator monitoring.
+
+### 4. 🧪 Comprehensive Testing Suite
+16 unit tests are implemented across all contract crates, verifying edge cases, authentication restrictions, splits calculations, and token distribution rules.
+- Run tests: `cargo test --workspace`
+
+### 5. 🤖 Automated CI/CD Pipelines
+GitHub Actions are configured under `.github/workflows/` to ensure production-level code quality:
+- **Contract Tests & WASM Build** (`test.yml`): Compiles Rust files under 1.85.0 toolchain, validates WASM targets, and runs unit tests.
+- **Testnet Deployment** (`deploy.yml`): Automates contract uploads and deployments to Stellar Testnet.
+- **Performance & Audits** (`lighthouse.yml`): Runs Google Lighthouse audits to enforce high performance and accessibility standards.
+
+### 6. 📱 Responsive UI & Wallet Integration
+- Built with **Next.js 16**, **TypeScript**, and **Tailwind CSS v4** styling.
+- Works seamlessly on mobile viewports down to 375px.
+- Connects securely with the **Freighter Wallet** to sign ledger transactions.
+- Implements transaction locking/mutexes to prevent duplicate freighter wallet popups.
+- Implements thorough error-handling and disabled inputs during transactions.
+
 ---
 
-## ✨ Features
+## 🌐 Live Contracts (Stellar Testnet)
 
-| Feature | Description |
+| Contract | Address |
 |---|---|
-| 🔐 **Non-Custodial** | Payments go directly wallet-to-wallet. StellarVault never holds funds. |
-| ⚡ **3–5s Finality** | Stellar's consensus settles transactions in seconds, not minutes. |
-| 💸 **Zero Platform Fee** | 0% cut. You keep 100% of subscription revenue. |
-| 🪙 **VAULT Token Rewards** | Subscribers earn VAULT tokens on every payment automatically. |
-| 📊 **Revenue Splits** | Define splits in basis points across unlimited recipients. |
-| 🔍 **Fully Transparent** | Every transaction, every split, every subscription — all on-chain. |
-| 📱 **Mobile Responsive** | Works perfectly on 375px and up. |
-| 🌐 **Freighter Wallet** | One-click connect with the leading Stellar browser wallet. |
-| 🧪 **Fully Tested** | 16 unit tests across all 3 contracts, 0 failures. |
-| 🤖 **CI/CD** | GitHub Actions for test, deploy, and Lighthouse audit. |
-
----
-
-## 🏗 Architecture
-
-StellarVault is composed of **3 auditable Soroban smart contracts**:
-
-### `SubscriptionManager` — Core Contract
-The main orchestrator. Handles tier creation, subscribe/renew/cancel flows, and TTL-aware persistent subscription records on-chain.
-
-```rust
-pub fn subscribe(env: Env, subscriber: Address, tier_id: u32) {
-    subscriber.require_auth();
-    // Route payment: transfer directly to RevenueRouter contract
-    token::Client::new(&env, &payment_token)
-        .transfer(&subscriber, &revenue_router, &tier.price);
-    // Trigger on-chain basis points splitting and distribution
-    RevenueRouterClient::new(&env, &revenue_router)
-        .route(&payment_token, &tier.price);
-    // Mint VAULT reward tokens to subscriber
-    VaultTokenClient::new(&env, &vault_token)
-        .mint(&subscriber, &reward_amount);
-    // Store subscription record with TTL extension
-    env.storage().persistent().extend_ttl(&key, duration, duration * 2);
-}
-```
-
-### `RevenueRouter` — Payment Splits
-Distributes incoming payments to multiple recipients using configurable basis points. All splits must sum to exactly 10,000 bps (100%).
-
-### `VaultToken` — SEP-41 Fungible Token
-Fully compliant Stellar fungible token. Mints VAULT rewards to subscribers on every payment. Only the SubscriptionManager can call `mint()`.
+| **SubscriptionManager** | `CCMYKDKG5LGUQFJVQFNCWSUVKTKCA33CZ32ZXOLLP6GFM6LUEHNI52F4` |
+| **RevenueRouter** | `CABPHTUFOX6NLNI5TYUSZF2CIXFMSEHGEU364NA4LNQVOXX5V7ZQDBPH2J` |
+| **VaultToken** | `CAPQ327DH5GR5TGSWPIF44PIIDFQI3TNLA2DSSSY3GTZN32GQC6RNLDS` |
 
 ---
 
@@ -117,81 +99,28 @@ stellarvault/
 ├── frontend/
 │   ├── app/
 │   │   ├── page.tsx            # Landing page
-│   │   ├── dashboard/          # Creator dashboard
-│   │   ├── subscribe/          # Subscriber view + tier browser
-│   │   └── admin/              # Admin panel (splits, reward rate)
-│   ├── components/             # WalletConnect, TierCard, StatCard, etc.
-│   ├── lib/contracts.ts        # Stellar SDK + Soroban contract bindings
-│   └── hooks/                  # useWallet, useDashboard
+│   │   ├── dashboard/          # Creator dashboard (live splits, stats, activity feed)
+│   │   ├── subscribe/          # Subscriber tier explorer & cancellation
+│   │   └── admin/              # On-chain admin settings (splits & reward rate config)
+│   ├── components/             # Freighter connection, modals, tables, and charts
+│   ├── lib/contracts.ts        # Soroban client integration & SDK wrapper
+│   └── hooks/                  # useWallet & useDashboard
 ├── scripts/
-│   ├── deploy.sh               # Deploy all 3 contracts to testnet
-│   └── initialize.sh           # Initialize contracts post-deploy
-└── .github/workflows/
-    ├── test.yml                # cargo test on every push
-    ├── deploy.yml              # Deploy to testnet on merge to main
-    └── lighthouse.yml          # Lighthouse CI audit
+│   ├── deploy.sh               # Compile & deploy scripts
+│   └── initialize.sh           # Configure parameters on-chain
+└── .github/workflows/          # CI/CD validation actions
 ```
 
 ---
 
-## 🌐 Live Contracts (Stellar Testnet)
-
-| Contract | Address |
-|---|---|
-| **SubscriptionManager** | `CCMYKDKG5LGUQFJVQFNCWSUVKTKCA33CZ32ZXOLLP6GFM6LUEHNI52F4` |
-| **RevenueRouter** | `CABPHTUFOX6NLNI5TYUSZF2CIXFMSEHGEU364NA4LNQXX5V7ZQDBPH2J` |
-| **VaultToken** | `CAPQ327DH5GR5TGSWPIF44PIIDFQI3TNLA2DSSSY3GTZN32GQC6RNLDS` |
-
-> 🔍 View on [Stellar Expert Testnet Explorer](https://stellar.expert/explorer/testnet)
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-```bash
-# Rust + Soroban WASM target
-rustup target add wasm32-unknown-unknown
-
-# Stellar CLI
-cargo install --locked stellar-cli --features opt
-
-# Node.js 18+ and pnpm
-npm install -g pnpm
-
-# Freighter browser extension (set to Testnet mode)
-# https://www.freighter.app/
-```
+## 🚀 Quick Start & Development
 
 ### Run Tests
-
 ```bash
 cargo test --workspace
-# ✓ 16 tests pass, 0 failures
 ```
 
-### Build Contracts
-
-```bash
-cargo build --target wasm32-unknown-unknown --release --workspace
-```
-
-### Deploy to Testnet
-
-```bash
-# Generate and fund a deployer account
-stellar keys generate deployer --network testnet --fund
-
-# Deploy all 3 contracts (auto-writes IDs to frontend/.env.local)
-bash scripts/deploy.sh
-
-# Initialize contracts with correct cross-contract addresses
-bash scripts/initialize.sh
-```
-
-### Run Frontend Locally
-
+### Build Frontend
 ```bash
 cd frontend
 pnpm install
@@ -201,63 +130,7 @@ pnpm dev
 
 ---
 
-## 🧪 Test Coverage
-
-```
-running 16 tests
-
-vault_token
-  ✓ test_mint_only_minter
-  ✓ test_transfer_updates_balances
-  ✓ test_burn_reduces_supply
-  ✓ test_allowance_and_transfer_from
-  ✓ test_transfer_insufficient_balance
-
-revenue_router
-  ✓ test_correct_splits
-  ✓ test_invalid_splits_panic
-  ✓ test_route_distributes_correctly
-  ✓ test_update_splits
-
-subscription_manager
-  ✓ test_create_tier
-  ✓ test_subscribe_flow
-  ✓ test_expired_inactive
-  ✓ test_renew_extends
-  ✓ test_cancel
-  ✓ test_bad_tier
-  ✓ test_reward_tokens_minted
-
-test result: ok. 16 passed; 0 failed; 0 ignored
-```
-
----
-
-## 🔄 CI/CD Pipelines
-
-| Workflow | Trigger | What it does |
-|---|---|---|
-| `test.yml` | Every push / PR | `cargo test --workspace` + WASM build |
-| `deploy.yml` | Merge to `main` | Deploys all 3 contracts to Stellar Testnet |
-| `lighthouse.yml` | Merge to `main` | Lighthouse audit — perf ≥80, a11y ≥90 |
-
----
-
-## 🛠 Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Smart Contracts | Rust + Soroban SDK 21 |
-| Frontend | Next.js 16, TypeScript, Tailwind CSS v4 |
-| Wallet | @stellar/freighter-api v6 |
-| Stellar SDK | @stellar/stellar-sdk v15 |
-| Charts | Recharts |
-| Hosting | Netlify |
-| CI/CD | GitHub Actions |
-| Network | Stellar Testnet |
-
----
-Screenshots-
+## Screenshots-
 
 <img width="1260" height="870" alt="Screenshot 2026-04-23 at 10 10 33 PM" src="https://github.com/user-attachments/assets/a781d35a-50ad-40bc-b2e6-393746c092e9" />
 
@@ -275,19 +148,8 @@ mobile view
 
 <img width="349" height="682" alt="Screenshot 2026-04-23 at 10 12 10 PM" src="https://github.com/user-attachments/assets/b8a6c097-2804-4051-a25c-f0c5f28798b1" />
 
-
 ---
 
 ## 📄 License
 
 MIT © [gaurav190901](https://github.com/gaurav190901)
-
----
-
-<div align="center">
-
-**[🚀 stellar-vault-app.netlify.app](https://stellar-vault-app.netlify.app)**
-
-Built with ✦ on Stellar/Soroban
-
-</div>
