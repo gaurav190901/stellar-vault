@@ -33,7 +33,7 @@ jobs:
       - name: Install Stellar CLI
         # Keep the CLI compatible with the pinned Rust/Soroban toolchain.
         # Installing the latest release can require a newer Rust compiler.
-        run: cargo install --locked stellar-cli --version 21.7.0 --features opt
+        run: cargo install --locked stellar-cli --version 23.0.1 --features opt
 
       - name: Configure Stellar account
         env:
