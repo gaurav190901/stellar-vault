@@ -11,8 +11,10 @@ import {
   Transaction,
 } from "@stellar/stellar-sdk";
 
-const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC || "https://soroban-testnet.stellar.org";
-const NETWORK_PASSPHRASE = Networks.TESTNET;
+/** Browser-side Soroban client used by every UI action. Contract IDs are public addresses. */
+export const RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC || "https://soroban-testnet.stellar.org";
+export const NETWORK_PASSPHRASE =
+  process.env.NEXT_PUBLIC_NETWORK === "mainnet" ? Networks.PUBLIC : Networks.TESTNET;
 
 export const server = new SorobanRpc.Server(RPC_URL, { allowHttp: false });
 
@@ -39,7 +41,26 @@ export interface SubscriptionRecord {
 }
 
 function assertContract(id: string, name: string) {
-  if (!id || id.length < 10) throw new Error(`${name} contract not deployed yet.`);
+  if (!/^C[A-Z2-7]{55}$/.test(id)) {
+    throw new Error(`${name} contract ID is missing or invalid. Configure its NEXT_PUBLIC_*_CONTRACT_ID value.`);
+  }
+}
+
+function requirePositiveInteger(value: number, field: string) {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`${field} must be a positive whole number.`);
+  }
+}
+
+function xlmToStroops(amount: number): bigint {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error("Price must be greater than zero.");
+  }
+  const stroops = Math.round(amount * 10_000_000);
+  if (!Number.isSafeInteger(stroops)) {
+    throw new Error("Price is outside the supported range.");
+  }
+  return BigInt(stroops);
 }
 
 async function buildAndAssemble(
@@ -131,7 +152,9 @@ export async function createTier(
   signTx: (xdr: string) => Promise<string>
 ) {
   assertContract(CONTRACTS.subscriptionManager, "SubscriptionManager");
-  const priceStroops = BigInt(Math.round(priceXlm * 10_000_000));
+  if (!name.trim()) throw new Error("Tier name is required.");
+  requirePositiveInteger(durationDays, "Duration in days");
+  const priceStroops = xlmToStroops(priceXlm);
   const durationLedgers = durationDays * 17280;
   const assembled = await buildAndAssemble(callerAddress, CONTRACTS.subscriptionManager, "create_tier", [
     nativeToScVal(name, { type: "string" }),
@@ -147,6 +170,7 @@ export async function subscribe(
   signTx: (xdr: string) => Promise<string>
 ) {
   assertContract(CONTRACTS.subscriptionManager, "SubscriptionManager");
+  requirePositiveInteger(tierId + 1, "Tier ID");
   const assembled = await buildAndAssemble(subscriberAddress, CONTRACTS.subscriptionManager, "subscribe", [
     Address.fromString(subscriberAddress).toScVal(),
     nativeToScVal(tierId, { type: "u32" }),
@@ -183,6 +207,7 @@ export async function renewSubscription(
   signTx: (xdr: string) => Promise<string>
 ) {
   assertContract(CONTRACTS.subscriptionManager, "SubscriptionManager");
+  requirePositiveInteger(tierId + 1, "Tier ID");
   const assembled = await buildAndAssemble(subscriberAddress, CONTRACTS.subscriptionManager, "renew", [
     Address.fromString(subscriberAddress).toScVal(),
     nativeToScVal(tierId, { type: "u32" }),
@@ -271,7 +296,8 @@ export async function getVaultBalance(address: string): Promise<bigint> {
 
 export async function getXlmBalance(address: string): Promise<string> {
   try {
-    const resp = await fetch(`https://horizon-testnet.stellar.org/accounts/${address}`);
+    const horizonUrl = process.env.NEXT_PUBLIC_HORIZON_URL || "https://horizon-testnet.stellar.org";
+    const resp = await fetch(`${horizonUrl}/accounts/${address}`);
     if (!resp.ok) return "0";
     const data = await resp.json();
     const native = data.balances?.find(
@@ -307,7 +333,16 @@ export async function updateSplits(
   signTx: (xdr: string) => Promise<string>
 ) {
   assertContract(CONTRACTS.revenueRouter, "RevenueRouter");
+  if (splits.length === 0) throw new Error("At least one revenue recipient is required.");
+  const total = splits.reduce((sum, split) => sum + split.basisPoints, 0);
+  if (total !== 10_000) throw new Error("Revenue splits must total exactly 10,000 basis points.");
   const items = splits.map((s) => {
+    if (!/^G[A-Z2-7]{55}$/.test(s.address)) {
+      throw new Error("Each revenue recipient must be a valid Stellar address.");
+    }
+    if (!Number.isSafeInteger(s.basisPoints) || s.basisPoints < 0 || s.basisPoints > 10_000) {
+      throw new Error("Each split must be between 0 and 10,000 basis points.");
+    }
     return xdr.ScVal.scvVec([
       Address.fromString(s.address).toScVal(),
       nativeToScVal(s.basisPoints, { type: "u32" }),
@@ -338,6 +373,9 @@ export async function updateRewardRate(
   signTx: (xdr: string) => Promise<string>
 ) {
   assertContract(CONTRACTS.subscriptionManager, "SubscriptionManager");
+  if (!Number.isSafeInteger(rewardRate) || rewardRate < 0) {
+    throw new Error("Reward rate must be a non-negative whole number.");
+  }
   const assembled = await buildAndAssemble(callerAddress, CONTRACTS.subscriptionManager, "update_reward_rate", [
     nativeToScVal(BigInt(rewardRate), { type: "i128" }),
   ]);
@@ -353,7 +391,8 @@ export async function updateTier(
   signTx: (xdr: string) => Promise<string>
 ) {
   assertContract(CONTRACTS.subscriptionManager, "SubscriptionManager");
-  const priceStroops = BigInt(Math.round(priceXlm * 10_000_000));
+  requirePositiveInteger(durationDays, "Duration in days");
+  const priceStroops = xlmToStroops(priceXlm);
   const durationLedgers = durationDays * 17280;
   const assembled = await buildAndAssemble(callerAddress, CONTRACTS.subscriptionManager, "update_tier", [
     nativeToScVal(tierId, { type: "u32" }),
@@ -370,6 +409,7 @@ export async function cancelSubscription(
   signTx: (xdr: string) => Promise<string>
 ) {
   assertContract(CONTRACTS.subscriptionManager, "SubscriptionManager");
+  requirePositiveInteger(tierId + 1, "Tier ID");
   const assembled = await buildAndAssemble(subscriberAddress, CONTRACTS.subscriptionManager, "cancel", [
     Address.fromString(subscriberAddress).toScVal(),
     nativeToScVal(tierId, { type: "u32" }),
