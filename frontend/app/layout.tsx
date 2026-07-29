@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Layout from "@/components/Layout";
+import { WalletProvider } from "@/hooks/useWallet";
 
 export const metadata: Metadata = {
   title: "StellarVault — On-Chain Subscriptions",
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Layout>{children}</Layout>
+        <WalletProvider>
+          <Layout>{children}</Layout>
+        </WalletProvider>
       </body>
     </html>
   );

@@ -64,7 +64,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">Subscription Tiers</h2>
-            <button onClick={refresh} className="text-xs transition-colors" style={{color: "var(--muted)"}}>↻ Refresh</button>
+            <button onClick={() => refresh(true)} className="text-xs transition-colors" style={{color: "var(--muted)"}}>↻ Refresh</button>
           </div>
           <SubscriptionTable tiers={tiers} onEdit={(t: TierConfig) => setEditingTier(t)} />
         </div>
@@ -139,12 +139,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {showCreate && <CreateTierModal onClose={() => setShowCreate(false)} onSuccess={refresh} />}
+      {showCreate && <CreateTierModal onClose={() => setShowCreate(false)} onSuccess={() => refresh(true)} />}
       {editingTier && (
         <EditTierModal
           tier={editingTier}
           onClose={() => setEditingTier(null)}
-          onSuccess={refresh}
+          onSuccess={() => refresh(true)}
         />
       )}
     </div>

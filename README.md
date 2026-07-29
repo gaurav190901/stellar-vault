@@ -15,14 +15,27 @@
 
 **[🚀 Live Demo → stellar-vault-app.netlify.app](https://stellar-vault-app.netlify.app)**
 
-
 <br />
 
 </div>
 
 ---
-## forms link - https://docs.google.com/spreadsheets/d/17JbSpNFW8GeYXYUdqyytwhz1ZKJDsyRRcGe0RXKySaM/edit?usp=sharing
-## 🏗 Key Features & Architecture Implementation
+## 📝 Feedback & Response Tracking
+
+Help us improve StellarVault by submitting feedback through the form below. Responses are collected automatically in the linked spreadsheet.
+
+- **[Open the feedback form](https://docs.google.com/forms/d/1etiCOf1ZtK_5LS3Re1RSLpIK6nK8cF7zJ_Q2XKOpzHs/edit)**
+- **[View form responses](https://docs.google.com/spreadsheets/d/1VissBglqhCp7ngxRe3ml3al75DFscWhk8YFX3Dx0ADc/edit?resourcekey=&gid=1340063404#gid=1340063404)**
+
+### Feedback addressed
+
+The latest user responses highlighted three issues:
+
+- **“The UI was lagging a bit.”** Dashboard reads now share a short-lived snapshot cache and deduplicate in-flight requests, reducing repeated Soroban RPC calls during navigation and refreshes.
+- **“The wallet sometimes doesn’t recognize the Freighter wallet.”** Connection now retries detection, uses Freighter’s explicit access flow, watches for account changes, and reports network or extension state clearly.
+- **“My wallet wasn’t connecting.”** The connect control now has a retry path, validates the returned address, checks the active network, and surfaces actionable error text instead of failing silently.
+
+## 🏗️ Key Features & Architecture
 
 StellarVault is a production-ready, fully on-chain subscription and payment splits protocol built on Stellar's Soroban smart contract platform. It enables SaaS platforms, DAOs, and content creators to monetize without middlemen, charge transparently, and route revenue splits instantly on-chain.
 
@@ -129,7 +142,7 @@ pnpm dev
 
 ---
 
-## Screenshots-
+## 📸 Screenshots
 
 <img width="1260" height="870" alt="Screenshot 2026-04-23 at 10 10 33 PM" src="https://github.com/user-attachments/assets/a781d35a-50ad-40bc-b2e6-393746c092e9" />
 
@@ -140,7 +153,7 @@ pnpm dev
 <img width="1443" height="859" alt="Screenshot 2026-04-23 at 10 11 21 PM" src="https://github.com/user-attachments/assets/849b5d9c-aa9f-4d31-aba3-75c870c3855f" />
 
 
-mobile view 
+### Mobile view
 
 <img width="353" height="770" alt="Screenshot 2026-04-23 at 10 12 24 PM" src="https://github.com/user-attachments/assets/5ff834c5-b0e1-411b-a0c4-18cce756173f" />
 
@@ -151,4 +164,8 @@ mobile view
 
 ## 📄 License
 
-MIT © [gaurav190901](https://github.com/gaurav190901)
+MIT © [Atharvashind](https://github.com/Atharvashind)
+
+## Contributors
+
+- [Atharvashind](https://github.com/Atharvashind)

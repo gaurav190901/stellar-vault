@@ -2,7 +2,7 @@
 import { useWallet } from "@/hooks/useWallet";
 
 export default function WalletConnect() {
-  const { shortAddress, isConnected, loading, error, connect, disconnect } = useWallet();
+  const { shortAddress, isConnected, loading, error, connect, disconnect, retry } = useWallet();
   return (
     <div>
       {isConnected ? (
@@ -23,7 +23,14 @@ export default function WalletConnect() {
           {loading ? "Connecting..." : "Connect Wallet"}
         </button>
       )}
-      {error && <p className="text-xs mt-1" style={{color: "#f87171"}}>{error}</p>}
+      {error && (
+        <div className="mt-2 max-w-xs rounded-lg border border-red-400/20 bg-red-400/5 p-2.5" role="alert">
+          <p className="text-xs leading-relaxed" style={{color: "#f87171"}}>{error}</p>
+          <button onClick={retry} disabled={loading} className="mt-1 text-[11px] font-semibold text-white underline underline-offset-2 disabled:opacity-50">
+            Try again
+          </button>
+        </div>
+      )}
     </div>
   );
 }
