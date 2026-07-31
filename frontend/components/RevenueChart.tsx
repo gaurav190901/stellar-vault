@@ -15,7 +15,7 @@ const defaultSplits: Split[] = [
 
 export default function RevenueChart({ splits = defaultSplits }: { splits?: Split[] }) {
   const data = splits.map((s) => ({
-    name: s.address.length > 10 ? `${s.address.slice(0, 6)}...` : s.address,
+    name: s.address.length > 10 ? `${s.address.slice(0, 6)}…` : s.address,
     value: s.basisPoints / 100,
   }));
 

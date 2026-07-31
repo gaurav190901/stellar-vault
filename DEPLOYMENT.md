@@ -4,16 +4,14 @@
 
 | Contract | Address |
 |---|---|
-| **VaultToken** | `CAPQ327DH5GR5TGSWPIF44PIIDFQI3TNLA2DSSSY3GTZN32GQC6RNLDS` |
-| **RevenueRouter** | `CABPHTUFOX6NLNI5TYUSZF2CIXFMSEHGEU364NA4LNQXX5V7ZQDBPH2J` |
-| **SubscriptionManager** | `CBC3LI22YE53J6ZOEWRPHLXUKJB5UFK6FPJEVGNEQCOQJONJ2ENUEOE7` |
+| **VaultToken** | `CBB3LIJZJ7CSPKVVFHVFQ2E2UPFSVKWSSZI2WC34NTL32UJPCIWZFTWA` |
+| **RevenueRouter** | `CARIU43DRKA3UZIEVRTRI5GY5QUX2OGIHWCCJ4GKHNNCQO27QPZOFI22` |
+| **SubscriptionManager** | `CCWWFT7W3GPFC23QQDWZKTKTACFMBA6ZREIEFRHFIX5EGOX4KZUMCGCZ` |
 
 ## ✅ Live Tiers on Testnet
 
-- **Tier 0**: Basic — 10 XLM / 30 days
-- **Tier 1**: Pro — 25 XLM / 30 days  
-- **Tier 2**: Enterprise — 100 XLM / 30 days
-- **Tier 3**: TestFromAlice — 5 XLM / 1 day
+- **Tier 0**: Testnet Activity — 1 XLM / 30 days
+- **Verified activity**: 18 unique successful subscription transactions
 
 ## ✅ Frontend Running
 
@@ -86,7 +84,7 @@ SubscriptionManager Contract
 
 ## 📝 Notes
 
-- **Admin address**: `GC5HL2KXTCEXGZU4N6QIDQLIXW6HSFYEZV7ELAEEHDL4EHUMVSTZCPX6`
+- **Admin address**: `GB7FBPFF4EZ7ZTS4GSODM2RDWHGIRPAK3FGBEEMMGLLEZYFIYBUXYYEI`
 - **Network**: Stellar Testnet
 - **RPC**: https://soroban-testnet.stellar.org
 - **Horizon**: https://horizon-testnet.stellar.org

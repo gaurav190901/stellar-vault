@@ -9,6 +9,7 @@ import CreateTierModal from "@/components/CreateTierModal";
 import EditTierModal from "@/components/EditTierModal";
 import WalletConnect from "@/components/WalletConnect";
 import { TierConfig, CONTRACTS } from "@/lib/contracts";
+import { TESTNET_EVIDENCE, shortenEvidenceAddress } from "@/lib/testnetEvidence";
 
 export default function DashboardPage() {
   const { address, isConnected } = useWallet();
@@ -75,7 +76,7 @@ export default function DashboardPage() {
         <h2 className="text-sm font-semibold mb-4">Subscription Tiers Overview</h2>
         {tiers.length === 0 ? (
           <p className="text-sm text-center py-4" style={{color: "var(--muted)"}}>
-            {loading ? "Loading..." : "No tiers created yet. Click '+ Create Tier' to get started."}
+            {loading ? "Loading…" : "No tiers created yet. Select Create Tier to get started."}
           </p>
         ) : (
           <div className="flex flex-col gap-3">
@@ -107,36 +108,39 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Protocol Activity Feed */}
+      {/* Verifiable protocol evidence */}
       <div className="card p-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold">Live Protocol Activity</h2>
-          <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse">
-            ● Streaming
+          <div>
+            <h2 className="text-sm font-semibold">Verified Testnet Activity</h2>
+            <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Successful subscription transactions from the latest validation run</p>
+          </div>
+          <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            18 Confirmed
           </span>
         </div>
         <div className="flex flex-col gap-3 font-mono text-xs">
-          {[
-            { time: "Just now", event: "subbed", desc: "User G...72c8 subscribed to Pro Tier (#1) — routed 25.00 XLM to RevenueRouter" },
-            { time: "2 mins ago", event: "renewed", desc: "User G...e1f2 renewed Basic Tier (#0) — routed 10.00 XLM to RevenueRouter" },
-            { time: "1 hour ago", event: "splits_updated", desc: "Admin updated splits in RevenueRouter: [gaurav190901: 7000bp, partner: 2000bp, treasury: 1000bp]" },
-            { time: "3 hours ago", event: "rate_updated", desc: "Admin updated VAULT reward rate: 100 VAULT per 10M stroops" },
-          ].map((item, i) => (
-            <div key={i} className="flex justify-between items-start gap-4 py-2 border-b border-[#1e2d4a]/30 last:border-0">
-              <div className="flex gap-2">
-                <span className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${
-                  item.event === "subbed" ? "bg-emerald-500/10 text-emerald-400" :
-                  item.event === "renewed" ? "bg-[#5bb8d4]/10 text-[#5bb8d4]" :
-                  "bg-purple-500/10 text-purple-400"
-                }`}>
-                  {item.event}
+          {TESTNET_EVIDENCE.transactions.slice(-4).reverse().map((item) => (
+            <a
+              key={item.hash}
+              href={`https://stellar.expert/explorer/testnet/tx/${item.hash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex justify-between items-start gap-4 py-2 border-b border-[#1e2d4a]/30 last:border-0 hover:text-[#5bb8d4] transition-colors"
+            >
+              <div className="flex gap-2 min-w-0">
+                <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-emerald-500/10 text-emerald-400">
+                  Success
                 </span>
-                <span className="text-slate-300">{item.desc}</span>
+                <span className="text-slate-300 truncate" translate="no">
+                  {shortenEvidenceAddress(item.address)} subscribed to Tier #{TESTNET_EVIDENCE.tierId}
+                </span>
               </div>
-              <span className="text-slate-500 text-[10px] whitespace-nowrap">{item.time}</span>
-            </div>
+              <span className="text-slate-500 text-[10px] whitespace-nowrap" translate="no">{item.hash.slice(0, 10)}… ↗</span>
+            </a>
           ))}
         </div>
+        <a href="/status" className="btn-outline mt-4 text-center w-full">View Full Protocol Status</a>
       </div>
 
       {showCreate && <CreateTierModal onClose={() => setShowCreate(false)} onSuccess={() => refresh(true)} />}

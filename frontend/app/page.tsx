@@ -88,8 +88,9 @@ export default function HomePage() {
             Subscribers earn rewards. No middlemen.
           </p>
           <div className="flex flex-wrap gap-4">
-            <Link href="/dashboard" className="btn-primary">Launch Dashboard →</Link>
+            <Link href="/onboarding" className="btn-primary">Start Onboarding →</Link>
             <Link href="/subscribe" className="btn-outline">Browse Tiers</Link>
+            <Link href="/status" className="btn-outline">View Testnet Proof</Link>
           </div>
 
           {/* Stats row */}
@@ -237,7 +238,7 @@ export default function HomePage() {
             on-chain subscriptions in under 5 minutes.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
-            <Link href="/dashboard" className="btn-primary">Open Dashboard →</Link>
+            <Link href="/onboarding" className="btn-primary">Start Onboarding →</Link>
             <Link href="/subscribe" className="btn-outline">View Live Tiers</Link>
           </div>
         </div>

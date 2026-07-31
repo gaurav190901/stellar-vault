@@ -3,6 +3,7 @@ import { TierConfig, stroopsToXlm, ledgersToDays, subscribe } from "@/lib/contra
 import { useWallet } from "@/hooks/useWallet";
 import { useState } from "react";
 import TransactionStatus from "./TransactionStatus";
+import { trackEvent } from "@/lib/telemetry";
 
 interface TierCardProps {
   tier: TierConfig;
@@ -23,10 +24,12 @@ export default function TierCard({ tier, isSubscribed, onSubscribeSuccess }: Tie
       const result = await subscribe(address, tier.id, signTx);
       setTxHash(result.hash);
       setTxStatus("success");
+      trackEvent("subscription_confirmed", { tierId: tier.id });
       onSubscribeSuccess?.();
     } catch (e: unknown) {
       setTxStatus("error");
       setTxMsg(e instanceof Error ? e.message : "Transaction failed");
+      trackEvent("subscription_failed", { tierId: tier.id });
     }
   };
 
@@ -60,7 +63,7 @@ export default function TierCard({ tier, isSubscribed, onSubscribeSuccess }: Tie
         <button onClick={handleSubscribe}
           disabled={!isConnected || txStatus === "pending" || !tier.active}
           className="btn-primary w-full text-center disabled:opacity-40">
-          {txStatus === "pending" ? "Confirming..." : "Subscribe"}
+          {txStatus === "pending" ? "Confirming…" : "Subscribe"}
         </button>
       )}
 

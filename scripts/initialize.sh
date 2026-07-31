@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 NETWORK="${NETWORK:-testnet}"
 SOURCE="${SOURCE:-deployer}"

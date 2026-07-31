@@ -4,6 +4,7 @@ import { useWallet } from "@/hooks/useWallet";
 import WalletConnect from "@/components/WalletConnect";
 import TransactionStatus from "@/components/TransactionStatus";
 import { getSplits, updateSplits, getRewardRate, updateRewardRate } from "@/lib/contracts";
+import { trackEvent } from "@/lib/telemetry";
 
 const ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS || "";
 
@@ -60,6 +61,7 @@ export default function AdminPage() {
       await updateSplits(address, splits, signTx);
       setTxStatus("success");
       setSaved(true);
+      trackEvent("revenue_splits_updated", { recipients: splits.length });
       setTimeout(() => {
         setSaved(false);
         setTxStatus("idle");
@@ -79,6 +81,7 @@ export default function AdminPage() {
       await updateRewardRate(address, parseInt(rewardRate) || 0, signTx);
       setTxStatus("success");
       setRateSaved(true);
+      trackEvent("reward_rate_updated", { rewardRate: parseInt(rewardRate) || 0 });
       setTimeout(() => {
         setRateSaved(false);
         setTxStatus("idle");
@@ -131,25 +134,35 @@ export default function AdminPage() {
       {/* Revenue Splits */}
       <div className="rounded-2xl bg-[#0d1526] border border-[#1e2d4a] p-6">
         <h2 className="text-sm font-semibold text-white mb-4">
-          Revenue Splits {loading && <span className="text-xs text-[#4f8ef7] animate-pulse ml-2 font-normal">(Loading...)</span>}
+          Revenue Splits {loading && <span className="text-xs text-[#4f8ef7] animate-pulse ml-2 font-normal">(Loading…)</span>}
         </h2>
         <form onSubmit={handleSaveSplits} className="flex flex-col gap-4">
           {splits.map((split, i) => (
             <div key={i} className="flex gap-3 items-center">
+              <label htmlFor={`split-address-${i}`} className="sr-only">Recipient {i + 1} Stellar address</label>
               <input
+                id={`split-address-${i}`}
+                name={`split_address_${i}`}
                 type="text"
+                autoComplete="off"
+                spellCheck={false}
                 value={split.address}
                 onChange={(e) => {
                   const next = [...splits];
                   next[i].address = e.target.value;
                   setSplits(next);
                 }}
-                placeholder="Stellar address (G...)"
+                placeholder="Stellar address (G…)"
                 className="flex-1 bg-[#0a0f1e] border border-[#1e2d4a] rounded-xl px-4 py-2.5 text-white placeholder-slate-600 focus:outline-none focus:border-[#4f8ef7]/50 text-sm font-mono"
                 required
               />
+              <label htmlFor={`split-basis-points-${i}`} className="sr-only">Recipient {i + 1} basis points</label>
               <input
+                id={`split-basis-points-${i}`}
+                name={`split_basis_points_${i}`}
                 type="number"
+                autoComplete="off"
+                inputMode="numeric"
                 value={split.basisPoints}
                 onChange={(e) => {
                   const next = [...splits];
@@ -165,7 +178,7 @@ export default function AdminPage() {
             </div>
           ))}
 
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-xs" aria-live="polite">
             <span className="text-slate-500">Total: {totalBp} / 10000 basis points</span>
             {totalBp !== 10000 && (
               <span className="text-red-400">Must equal 10000</span>
@@ -190,7 +203,7 @@ export default function AdminPage() {
             disabled={totalBp !== 10000 || txStatus === "pending"}
             className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#7c3aed] to-[#4f8ef7] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-40"
           >
-            {saved ? "✓ Saved" : txStatus === "pending" ? "Updating..." : "Update Splits"}
+            {saved ? "✓ Saved" : txStatus === "pending" ? "Updating…" : "Update Splits"}
           </button>
         </form>
       </div>
@@ -198,12 +211,17 @@ export default function AdminPage() {
       {/* Reward Rate */}
       <div className="rounded-2xl bg-[#0d1526] border border-[#1e2d4a] p-6">
         <h2 className="text-sm font-semibold text-white mb-4">
-          VAULT Reward Rate {loading && <span className="text-xs text-[#4f8ef7] animate-pulse ml-2 font-normal">(Loading...)</span>}
+          VAULT Reward Rate {loading && <span className="text-xs text-[#4f8ef7] animate-pulse ml-2 font-normal">(Loading…)</span>}
         </h2>
         <form onSubmit={handleSaveRewardRate} className="flex flex-col gap-4">
           <div className="flex gap-3 items-center">
+            <label htmlFor="reward-rate" className="sr-only">VAULT reward rate per 10 million stroops</label>
             <input
+              id="reward-rate"
+              name="reward_rate"
               type="number"
+              autoComplete="off"
+              inputMode="numeric"
               value={rewardRate}
               onChange={(e) => setRewardRate(e.target.value)}
               min="0"
@@ -220,7 +238,7 @@ export default function AdminPage() {
             disabled={txStatus === "pending"}
             className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#7c3aed] to-[#4f8ef7] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            {rateSaved ? "✓ Saved" : txStatus === "pending" ? "Updating..." : "Update Rate"}
+            {rateSaved ? "✓ Saved" : txStatus === "pending" ? "Updating…" : "Update Rate"}
           </button>
         </form>
       </div>

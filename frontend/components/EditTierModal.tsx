@@ -48,25 +48,26 @@ export default function EditTierModal({ tier, onClose, onSuccess }: EditTierModa
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overscroll-contain"
+      role="dialog" aria-modal="true" aria-labelledby="edit-tier-title"
       style={{ background: "rgba(6,11,20,0.8)", backdropFilter: "blur(8px)" }}>
       <div className="card w-full max-w-md p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="font-semibold text-white">Edit Subscription Tier</h2>
-          <button onClick={onClose} className="text-sm text-slate-400 hover:text-white transition-colors">✕</button>
+          <h2 id="edit-tier-title" className="font-semibold text-white">Edit Subscription Tier</h2>
+          <button type="button" onClick={onClose} aria-label="Close edit tier dialog" className="text-sm text-slate-400 hover:text-white transition-colors"><span aria-hidden="true">✕</span></button>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label className="text-xs font-medium uppercase tracking-wider mb-1.5 block text-slate-400">Tier Name (Read-only)</label>
-            <input style={{ ...inputStyle, opacity: 0.5, cursor: "not-allowed" }} value={tier.name} disabled />
+            <label htmlFor="edit-tier-name" className="text-xs font-medium uppercase tracking-wider mb-1.5 block text-slate-400">Tier Name (Read-only)</label>
+            <input id="edit-tier-name" name="tier_name" style={{ ...inputStyle, opacity: 0.5, cursor: "not-allowed" }} value={tier.name} disabled />
           </div>
           <div>
-            <label className="text-xs font-medium uppercase tracking-wider mb-1.5 block text-slate-400">Price (XLM)</label>
-            <input style={inputStyle} type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="e.g. 10" min="0.1" step="0.1" required />
+            <label htmlFor="edit-tier-price" className="text-xs font-medium uppercase tracking-wider mb-1.5 block text-slate-400">Price (XLM)</label>
+            <input id="edit-tier-price" name="tier_price" autoComplete="off" inputMode="decimal" style={inputStyle} type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="Example: 10…" min="0.1" step="0.1" required />
           </div>
           <div>
-            <label className="text-xs font-medium uppercase tracking-wider mb-1.5 block text-slate-400">Duration (Days)</label>
-            <input style={inputStyle} type="number" value={days} onChange={e => setDays(e.target.value)} placeholder="e.g. 30" min="1" required />
+            <label htmlFor="edit-tier-days" className="text-xs font-medium uppercase tracking-wider mb-1.5 block text-slate-400">Duration (Days)</label>
+            <input id="edit-tier-days" name="tier_duration_days" autoComplete="off" inputMode="numeric" style={inputStyle} type="number" value={days} onChange={e => setDays(e.target.value)} placeholder="Example: 30…" min="1" required />
           </div>
           <div className="flex items-center gap-3 py-1">
             <input
@@ -84,7 +85,7 @@ export default function EditTierModal({ tier, onClose, onSuccess }: EditTierModa
           <div className="flex gap-3 mt-2">
             <button type="button" onClick={onClose} className="btn-outline flex-1 text-center">Cancel</button>
             <button type="submit" disabled={txStatus === "pending"} className="btn-primary flex-1 text-center disabled:opacity-50">
-              {txStatus === "pending" ? "Updating..." : "Save Changes"}
+              {txStatus === "pending" ? "Updating…" : "Save Changes"}
             </button>
           </div>
         </form>

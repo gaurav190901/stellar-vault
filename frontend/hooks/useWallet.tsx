@@ -2,6 +2,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { WatchWalletChanges } from "@stellar/freighter-api";
 import { connectWallet, getWalletAddress, signTx, shortenAddress } from "@/lib/wallet";
+import { trackEvent } from "@/lib/telemetry";
 
 interface WalletContextValue {
   address: string | null;
@@ -50,8 +51,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       setAddress(await connectWallet());
+      trackEvent("wallet_connected", { network: "testnet" });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Freighter could not connect.");
+      trackEvent("wallet_connection_failed", { network: "testnet" });
     } finally {
       connecting.current = false;
       setLoading(false);
@@ -64,6 +67,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     ignoreWatcher.current = true;
     setAddress(null);
     setError(null);
+    trackEvent("wallet_disconnected", { network: "testnet" });
   }, []);
 
   const value = useMemo<WalletContextValue>(() => ({

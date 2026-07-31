@@ -1,8 +1,14 @@
 name: Deploy to Testnet
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stellar-testnet-deployment
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -25,10 +31,10 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-1.85-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install wasm-opt
+      - name: Install native build dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y binaryen
+          sudo apt-get install -y binaryen libdbus-1-dev pkg-config
 
       - name: Install Stellar CLI
         # Keep the CLI compatible with the pinned Rust/Soroban toolchain.
@@ -38,7 +44,12 @@ jobs:
       - name: Configure Stellar account
         env:
           STELLAR_SECRET_KEY: ${{ secrets.STELLAR_SECRET_KEY }}
-        run: stellar keys add deployer --secret-key "$STELLAR_SECRET_KEY"
+        run: |
+          if [ -z "$STELLAR_SECRET_KEY" ]; then
+            echo "::error::Repository secret STELLAR_SECRET_KEY is required."
+            exit 1
+          fi
+          stellar keys add deployer --secret-key "$STELLAR_SECRET_KEY"
 
       - name: Build WASM
         run: cargo build --target wasm32-unknown-unknown --release --workspace
@@ -55,8 +66,15 @@ jobs:
           NETWORK: testnet
         run: bash scripts/deploy.sh
 
+      - name: Initialize contracts
+        env:
+          SOURCE: deployer
+          NETWORK: testnet
+        run: bash scripts/initialize.sh
+
       - name: Upload contract addresses
         uses: actions/upload-artifact@v4
         with:
           name: contract-addresses
           path: frontend/.env.local
+          if-no-files-found: error

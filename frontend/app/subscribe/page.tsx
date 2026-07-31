@@ -28,6 +28,8 @@ export default function SubscribePage() {
   const [currentLedger, setCurrentLedger] = useState(0);
   const [renewStatus, setRenewStatus] = useState<Record<number, "idle" | "pending" | "success" | "error">>({});
   const [cancelStatus, setCancelStatus] = useState<Record<number, "idle" | "pending" | "success" | "error">>({});
+  const [renewErrors, setRenewErrors] = useState<Record<number, string>>({});
+  const [cancelErrors, setCancelErrors] = useState<Record<number, string>>({});
 
   const checkSubs = useCallback(async () => {
     if (!address || tiers.length === 0) return;
@@ -63,24 +65,35 @@ export default function SubscribePage() {
   const handleRenew = async (tierId: number) => {
     if (!address) return;
     setRenewStatus((s) => ({ ...s, [tierId]: "pending" }));
+    setRenewErrors((s) => ({ ...s, [tierId]: "" }));
     try {
       await renewSubscription(address, tierId, signTx);
       setRenewStatus((s) => ({ ...s, [tierId]: "success" }));
       await checkSubs();
-    } catch {
+    } catch (error: unknown) {
       setRenewStatus((s) => ({ ...s, [tierId]: "error" }));
+      setRenewErrors((s) => ({
+        ...s,
+        [tierId]: error instanceof Error ? error.message : "Renewal failed. Check Freighter and try again.",
+      }));
     }
   };
 
   const handleCancel = async (tierId: number) => {
     if (!address) return;
+    if (!window.confirm("Cancel this subscription? Access will end immediately and this action requires a wallet signature.")) return;
     setCancelStatus((s) => ({ ...s, [tierId]: "pending" }));
+    setCancelErrors((s) => ({ ...s, [tierId]: "" }));
     try {
       await cancelSubscription(address, tierId, signTx);
       setCancelStatus((s) => ({ ...s, [tierId]: "success" }));
       await checkSubs();
-    } catch {
+    } catch (error: unknown) {
       setCancelStatus((s) => ({ ...s, [tierId]: "error" }));
+      setCancelErrors((s) => ({
+        ...s,
+        [tierId]: error instanceof Error ? error.message : "Cancellation failed. Check Freighter and try again.",
+      }));
     }
   };
 
@@ -115,7 +128,7 @@ export default function SubscribePage() {
       )}
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" aria-live="polite" aria-busy="true" aria-label="Loading subscription tiers">
           {[1, 2, 3].map((i) => (
             <div key={i} className="rounded-2xl bg-[#0d1526] border border-[#1e2d4a] p-6 h-52 animate-pulse" />
           ))}
@@ -167,7 +180,7 @@ export default function SubscribePage() {
                           : "rgba(52,211,153,0.2)",
                       }}
                     >
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <p className="text-white font-medium">{tier.name}</p>
                         <p className="text-xs text-slate-500 mt-0.5">Tier #{tierId}</p>
                         {expiry && (
@@ -193,7 +206,7 @@ export default function SubscribePage() {
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         {(isExpiringSoon || isExpired) && (
                           <button
                             onClick={() => handleRenew(Number(tierId))}
@@ -205,7 +218,7 @@ export default function SubscribePage() {
                               border: "1px solid rgba(251,191,36,0.3)",
                             }}
                           >
-                            {status === "pending" ? "Renewing..." : status === "success" ? "✓ Renewed" : "Renew"}
+                            {status === "pending" ? "Renewing…" : status === "success" ? "✓ Renewed" : "Renew"}
                           </button>
                         )}
                         {!isExpired && (
@@ -219,7 +232,7 @@ export default function SubscribePage() {
                               border: "1px solid rgba(239,68,68,0.2)",
                             }}
                           >
-                            {cancelStatus[Number(tierId)] === "pending" ? "Cancelling..." : "Cancel"}
+                            {cancelStatus[Number(tierId)] === "pending" ? "Cancelling…" : "Cancel"}
                           </button>
                         )}
                         <span
@@ -229,6 +242,11 @@ export default function SubscribePage() {
                           {isExpired ? "Expired" : "✓ Active"}
                         </span>
                       </div>
+                      {(renewErrors[Number(tierId)] || cancelErrors[Number(tierId)]) && (
+                        <p className="sm:basis-full text-xs text-red-400" role="alert">
+                          {renewErrors[Number(tierId)] || cancelErrors[Number(tierId)]}
+                        </p>
+                      )}
                     </div>
                   );
                 })}

@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 NETWORK="${NETWORK:-testnet}"
 SOURCE="${SOURCE:-deployer}"
@@ -28,6 +28,7 @@ SUB_MANAGER_ID=$(stellar contract deploy \
 echo "SubscriptionManager: $SUB_MANAGER_ID"
 
 FRONTEND_ENV="$(dirname "$0")/../frontend/.env.local"
+ADMIN_ADDRESS=$(stellar keys address "$SOURCE")
 cat > "$FRONTEND_ENV" <<EOF
 NEXT_PUBLIC_NETWORK=$NETWORK
 NEXT_PUBLIC_HORIZON_URL=https://horizon-testnet.stellar.org
@@ -35,6 +36,7 @@ NEXT_PUBLIC_SOROBAN_RPC=https://soroban-testnet.stellar.org
 NEXT_PUBLIC_VAULT_TOKEN_CONTRACT_ID=$VAULT_TOKEN_ID
 NEXT_PUBLIC_REVENUE_ROUTER_CONTRACT_ID=$REVENUE_ROUTER_ID
 NEXT_PUBLIC_SUBSCRIPTION_MANAGER_CONTRACT_ID=$SUB_MANAGER_ID
+NEXT_PUBLIC_ADMIN_ADDRESS=$ADMIN_ADDRESS
 EOF
 
 echo ""

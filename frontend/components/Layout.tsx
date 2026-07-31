@@ -9,23 +9,30 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/subscribe", label: "Subscribe" },
   { href: "/admin", label: "Admin" },
+  { href: "/onboarding", label: "Start Here" },
+  { href: "/status", label: "Status" },
 ];
+
+const mobileNavItems = navItems.filter((item) =>
+  ["/", "/subscribe", "/dashboard", "/status"].includes(item.href),
+);
 
 export default function Layout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen flex flex-col" style={{background: "var(--background)"}}>
+    <div className="app-shell min-h-screen flex flex-col" style={{background: "var(--background)"}}>
+      <a href="#main-content" className="skip-link">Skip to Main Content</a>
       {/* Top nav */}
       <header style={{borderBottom: "1px solid var(--border)", background: "rgba(6,11,20,0.92)", backdropFilter: "blur(12px)"}}
         className="sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2" aria-label="StellarVault home">
             <span className="text-lg font-bold tracking-tight" style={{color: "var(--text)"}}>
-              ✦ <span style={{color: "var(--accent)"}}>Stellar</span>Vault
+              <span aria-hidden="true">✦</span> <span style={{color: "var(--accent)"}}>Stellar</span>Vault
             </span>
           </Link>
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-1" aria-label="Primary navigation">
             {navItems.map((item) => (
               <Link key={item.href} href={item.href}
                 className="px-3 py-1.5 rounded-lg text-sm transition-colors"
@@ -48,33 +55,43 @@ export default function Layout({ children }: { children: ReactNode }) {
       </header>
 
       {/* Main */}
-      <main className="flex-1">
+      <main id="main-content" className="flex-1" tabIndex={-1}>
         <div className="max-w-6xl mx-auto px-6 py-8">{children}</div>
       </main>
 
       {/* Footer */}
       <footer style={{borderTop: "1px solid var(--border)"}} className="px-6 py-8">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <span className="text-sm font-semibold" style={{color: "var(--accent)"}}>✦ StellarVault</span>
+          <span className="text-sm font-semibold" style={{color: "var(--accent)"}}><span aria-hidden="true">✦</span> StellarVault</span>
           <p className="text-xs" style={{color: "var(--muted)"}}>
             On-Chain Subscription Protocol · Built on Stellar/Soroban · Testnet
           </p>
           <div className="flex gap-4 text-xs" style={{color: "var(--muted)"}}>
             <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
             <Link href="/subscribe" className="hover:text-white transition-colors">Subscribe</Link>
-            <Link href="/admin" className="hover:text-white transition-colors">Admin</Link>
+            <Link href="/onboarding" className="hover:text-white transition-colors">Onboarding</Link>
+            <Link href="/status" className="hover:text-white transition-colors">Status</Link>
+            <a
+              href="https://docs.google.com/forms/d/1etiCOf1ZtK_5LS3Re1RSLpIK6nK8cF7zJ_Q2XKOpzHs/viewform"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+            >
+              Feedback
+            </a>
           </div>
         </div>
       </footer>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex"
+      <nav className="mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-40 flex"
+        aria-label="Mobile navigation"
         style={{background: "var(--surface)", borderTop: "1px solid var(--border)"}}>
-        {navItems.map((item) => (
+        {mobileNavItems.map((item) => (
           <Link key={item.href} href={item.href}
             className="flex-1 flex flex-col items-center py-3 text-xs gap-0.5 transition-colors"
             style={{color: pathname === item.href ? "var(--accent)" : "var(--muted)"}}>
-            {item.label}
+            {item.href === "/" ? "Home" : item.label}
           </Link>
         ))}
       </nav>
